@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+
+    <class name="ir.elenoon.db.Contacts" table="contacts" schema="competition">
+        <id name="id">
+            <column name="id" sql-type="int(6) unsigned"/>
+            <generator class="native"/>
+        </id>
+        <property name="username">
+            <column name="username" sql-type="varchar(50)" length="50"/>
+        </property>
+        <property name="standard_phone">
+            <column name="standard_phone" sql-type="varchar(20)" length="30" not-null="true"/>
+        </property>
+        <property name="name">
+            <column name="name" sql-type="varchar(50)" length="50"/>
+        </property>
+    </class>
+
+    <class name="ir.elenoon.db.Series" table="series" schema="competition">
+        <id name="series_id">
+            <column name="series_id" sql-type="int(6) unsigned"/>
+            <generator class="native"/>
+        </id>
+        <property name="seris_no">
+            <column name="series_no" sql-type="int(10)" not-null="true"/>
+        </property>
+        <property name="expire_time">
+            <column name="expire_time" sql-type="datetime" not-null="true"/>
+        </property>
+        <property name="start_time">
+            <column name="start_time" sql-type="datetime" not-null="true"/>
+        </property>
+        <property name="date">
+            <column name="date" sql-type="datetime"/>
+        </property>
+
+    </class>
+    <class name="ir.elenoon.db.Questions" table="questions" schema="competition">
+        <id name="questions_id">
+            <column name="question_id" sql-type="int(6) unsigned"/>
+            <generator class="native"/>
+        </id>
+        <property name="date">
+            <column name="date" sql-type="datetime"/>
+        </property>
+        <property name="text">
+            <column name="text" sql-type="text"/>
+        </property>
+
+        <many-to-one name="series" class="ir.elenoon.db.Series"
+                     column="series_id" unique="true" not-null="true"
+                     cascade="all"/>
+    </class>
+
+    <class name="ir.elenoon.db.Options" table="options" schema="competition">
+        <id name="option_id">
+            <column name="option_id" sql-type="int(6) unsigned"/>
+            <generator class="native"/>
+        </id>
+        <property name="text">
+            <column name="text" sql-type="text"/>
+        </property>
+        <property name="date">
+            <column name="date" sql-type="datetime"/>
+        </property>
+        <property name="is_true_option">
+            <column name="is_true_option" sql-type="boolean"/>
+        </property>
+
+
+        <many-to-one name="questions" class="ir.elenoon.db.Questions"
+                     column="question_id" unique="true" not-null="true"
+                     cascade="all"/>
+        <many-to-one name="series" class="ir.elenoon.db.Series"
+                     column="series_id" unique="true" not-null="true"
+                     cascade="all"/>
+    </class>
+
+    <class name="ir.elenoon.db.UsersAnswers" table="users_answers" schema="competition">
+        <id name="users_answer_id">
+            <column name="users_answer_id" sql-type="int(6) unsigned"/>
+            <generator class="native"/>
+        </id>
+        <property name="date">
+            <column name="date" sql-type="datetime"/>
+        </property>
+
+        <many-to-one name="options" class="ir.elenoon.db.Options"
+                     column="option_id" unique="true" not-null="true"
+                     cascade="all"/>
+        <many-to-one name="questions" class="ir.elenoon.db.Questions"
+                     column="question_id" unique="true" not-null="true"
+                     cascade="all"/>
+        <many-to-one name="contacts" class="ir.elenoon.db.Contacts"
+                     column="user_id" unique="true" not-null="true"
+                     cascade="all"/>
+        <many-to-one name="series" class="ir.elenoon.db.Series"
+                     column="series_id" unique="true" not-null="true"
+                     cascade="all"/>
+    </class>
+</hibernate-mapping>
