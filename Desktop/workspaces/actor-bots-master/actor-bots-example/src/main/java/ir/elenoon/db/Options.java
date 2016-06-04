@@ -1,7 +1,6 @@
 
 package ir.elenoon.db;
 
-import akka.http.javadsl.model.DateTime;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
@@ -19,18 +18,30 @@ public class Options {
     private Date date;
     private boolean is_true_option;
     private Questions questions;
+    private Series series;
 
-    public Options(String text, Date date, boolean is_true_option, Questions questions) {
+    public Options(String text, Date date, boolean is_true_option, Questions questions, Series series) {
         this.text = text;
         this.date = date;
         this.is_true_option = is_true_option;
         this.questions = questions;
+        this.series = series;
+
+    }
+
+    public Options() {
+
     }
 
     @Basic
     @Column(name = "is_true_option", nullable = false)
     public boolean getIs_true_option() {
         return is_true_option;
+    }
+
+
+    public Series getSeries() {
+        return series;
     }
 
 
@@ -86,6 +97,10 @@ public class Options {
 
     public void setQuestions(Questions questions) {
         this.questions = questions;
+    }
+
+    public void setSeries(Series series) {
+        this.series = series;
     }
 }
 

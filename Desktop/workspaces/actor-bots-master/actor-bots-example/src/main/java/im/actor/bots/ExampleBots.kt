@@ -1,167 +1,207 @@
 package im.actor.bots
 
-import im.actor.bots.framework.MagicBotFork
-import im.actor.bots.framework.MagicBotMessage
-import im.actor.bots.framework.MagicBotTextMessage
-import im.actor.bots.framework.MagicForkScope
-import im.actor.bots.framework.persistence.MagicPersistentBot
-import im.actor.bots.framework.stateful.*
-import java.math.*;
-
 /**
  * Very simple echo bot that forwards message
  */
 import im.actor.bots.framework.*
 import im.actor.bots.framework.stateful.*
-import ir.elenoon.db.MessageModel
-
+import ir.elenoon.constants.Constant
 import ir.elenoon.db.DBUtils
+import ir.elenoon.db.UsersAnswers
+import ir.elenoon.models.QuestionsModel
+import ir.elenoon.utils.Utils
 import org.json.JSONArray
 import org.json.JSONObject
-import java.awt.List
 import java.util.*
-import kotlin.system.measureTimeMillis
 
 open class NotificationBot(scope: MagicForkScope) : MagicStatefulBot(scope) {
 
-    var welcomeMessage = "Hello! I am notification bots and i can send you various notifications. " +
-            "Just send me /subscribe and i will start to broadcast messages to you"
+    var welcomeMessage = ""
 
 
 
-     override  fun configure() {
-
+    override  fun configure() {
+        var questions:kotlin.collections.List<QuestionsModel> ?= null
+        var user_series:List<UsersAnswers>
+        var userId:Int = -1
+        var que_size:Int = -2;
+        var current_qu:Int = 0
         enableSimpleMode("masood")
-         DBUtils.getInstance().addUserAnswer()
-         var s = listOf("۱", "۲", "3", "4")
-        var q = listOf("نام امام اول چیست؟", "نام امام دوم چیست؟", "نام امام سوم چیست؟")
-        var i = 0
+
+
 
         //sendText("سلام کافیست برای اغاز مسابقه برروی [شروع](send:/شروع) کلیک کنید")
-
-        /*       oneShot("/start") {
-
-        loop@ for (i in 1..12) {
-            var b = (Random().nextFloat() * 10).toInt()
-            sendText(i.toString())
-            goto("ask_text")
-        }
-           expectInput("ask_text") {
-
-                received {
-                    sendText("ok")
-                    goto("main")
-                }
-
-
-
+        expectCommands("/start",{before {
+            if (current_qu == 0) {
+                sendText(Constant.welcome)
+                userId = DBUtils.getInstance().insertUserIfNotExist(getUser(scope.peer.id).phoneContactRecords.toString())
             }
+            current_qu = 0
+            goto("select")
 
+        }})
 
-
-        }*/
-
-
-        command("/start") {
-
-            before {
-                if (i == 0) {
-                    sendText("خب شروع میکنیم")
-                    // var td = createBot("hasan", "hasan")?.token()
-                    //sendText(td.toString())
-                }
-
-                MessageModel.getInstance().set(getUser(scope.peer.id).username.toString(), getUser(scope.peer.id).name(), getUser(scope.peer.id).phoneContactRecords.toString(), text , null)
-                sendText("information")
-                sendText("شما مایل به خواندن چند ربع حذب می باشید . بر روی حذب انتخابی خود کلیک کنید")
-                sendText("[1](send:1)")
-                sendText("[2](send:2)")
-                sendText("[3](send:3)")
-                sendText("[4](send:2)")
-                goto("ask_hizb")
-                //sendText(getUser(scope.peer.id).toString())
-                //sendText(findUser("masood").toString())
-
-            }
-        }
-
-        expectInput("ask_hizb") {
+        expectInput("select") {
 
             received {
-               // MessageModel.getInstance().set(getUser(scope.peer.id).username.toString(), getUser(scope.peer.id).name(), getUser(scope.peer.id).phoneContactRecords.toString(), text , null)
+                // MessageModel.getInstance().set(getUser(scope.peer.id).username.toString(), getUser(scope.peer.id).name(), getUser(scope.peer.id).phoneContactRecords.toString(), text , null)
 
-                if (text == "/خروج") {
-                    var user = findUser("+989212785372")
-                    var a = OutPeer(PeerType.PRIVATE, user!!.id(), user.hashCode().toLong())
-                    sendText(a, getUser(scope.peer.id).phoneContactRecords.toString() +"نمره")
-                    sendText("ازمون به پایان رسید")
-                    sendText("اگه میخوای دوباره مسابقه بدی دوباره (/شروع) رو برام بفرست")
-                    gotoParent()
+                if (text == "مسابقه") {
+                    questions = DBUtils.getInstance().getQuestionsModels()
+                    if(questions != null && (questions as List<QuestionsModel>).size != 0){
+                        que_size = (questions as List<QuestionsModel>).size
+                        sendText(Constant.competitionIsReady)
+                        goto("/شروع")
+                    }
+                    else{
+                        sendText(Constant.expiredcompetition)
+                        goto("/start")
+                    }
+                }
 
+                else if(text == "کارنامه"){
+                    goto("/کارنامه")
                 }
                 else {
-                    sendText("az aye felan ta felan")
-                    sendText("[انجام دادم](send:تمام)")
-                    sendText("[انصراف میدهم](send:انصراف)")
-                    goto("done_cancel")
+                    goto("/start")
                     }
                     //sendText("ازمون به پایان رسید")
-                   // else {
 
 
 
-                         }
-
-
-
+            }
             validate {
-                if (text.equals("3")  || text.equals("1") || text.equals("۳") || text.equals("۱") || text.equals("۲")|| text.equals("2") || text.equals("/خروج")|| text.equals("4") || text.equals("۴") ) {
-                    sendText("متشکر از جواب شما")
+                if ( text.equals("مسابقه") || text.equals("کارنامه")) {
                     return@validate true
                 }
                 else {
-                    sendText("لطفا شماره ۱ یا ۲ یا ۳ یا ۴ را وارد کنید")
+                    sendText(Constant.invalidInput)
                     return@validate false
                 }
 
             }
         }
-         expectInput("done_cancel") {
 
-             received {
-                 //MessageModel.getInstance().set(getUser(scope.peer.id).username.toString(), getUser(scope.peer.id).name(), getUser(scope.peer.id).phoneContactRecords.toString(), text , null)
+        command("/شروع") {
 
-                 if (text == "تمام") {
-                     sendText("تا الان چند حذب خوندی")
-                     gotoParent()
-
-                 }
-                 else if(text == "انصراف"){
-                     sendText("از تلاش شما متشکریم")
-                     gotoParent()
-                 }
-                 //sendText("ازمون به پایان رسید")
-                 // else {
+            before {
+                if (current_qu == 0) {
+                    sendText(Constant.LetStart)
+                    sendText(Constant.cancelCompetition)
 
 
+                }
+                if (current_qu < que_size ) {
+                    sendText(questions!!.get(current_qu).question.text)
 
-             }
+                    for (item in questions!!.get(current_qu).optionses) {
+                        questions!!.get(current_qu).optionses.indexOf(item)+1
+                        sendText("["+item.text+"]"+"(send:"+(questions!!.get(current_qu).optionses.indexOf(item)+1).toString()+")")
+
+
+                    }
+
+                    goto("ask_text")
+
+                }
+
+
+            }
+        }
+        expectInput("ask_text") {
+
+            received {
+               // MessageModel.getInstance().set(getUser(scope.peer.id).username.toString(), getUser(scope.peer.id).name(), getUser(scope.peer.id).phoneContactRecords.toString(), text , null)
+
+                if (text == "/خروج") {
+                    var current_date:Date = Utils.getDate()
+                    var user = findUser("+989212785372")
+                    var a = OutPeer(PeerType.PRIVATE, user!!.id(), user.hashCode().toLong())
+                    sendText(a, getUser(scope.peer.id).phoneContactRecords.toString() +"نمره")
+                    sendText(Constant.finishedCompetition)
+
+                    gotoParent()
+
+                }
+                else {
+                    var current_date:Date = Utils.getDate()
+
+
+                    if (current_qu < que_size-1) {
+                        if(current_date < questions!!.get(0).series.start_time || current_date > questions!!.get(0).series.expire_time){
+                            sendText(Constant.expiredcompetition)
+                            current_qu = 0
+                            goto("/start")
+                        }else{
+                            DBUtils.getInstance().insertOrUpdateUserAnswer(userId, (questions as List<QuestionsModel>).get(current_qu).series, (questions as List<QuestionsModel>).get(current_qu).question, (questions as List<QuestionsModel>).get(current_qu).optionses.get(text.toInt()-1))
+                            current_qu++
+                            goto("/شروع")
+                        }
+                    }
+                    //sendText("ازمون به پایان رسید")
+                    else {
+                        if(current_date < questions!!.get(0).series.start_time || current_date > questions!!.get(0).series.expire_time){
+                            sendText(Constant.expiredcompetition)
+                            current_qu = 0
+                            goto("/start")
+                        }else{
+                            DBUtils.getInstance().insertOrUpdateUserAnswer(userId, (questions as List<QuestionsModel>).get(current_qu).series, (questions as List<QuestionsModel>).get(current_qu).question, (questions as List<QuestionsModel>).get(current_qu).optionses.get(text.toInt()-1))
+                            var x = findUser("+989212785372")
+                            var a = OutPeer(PeerType.PRIVATE, x!!.id(), x.accessHash().toLong())
+                            sendText(Constant.finishedCompetition)
+                            current_qu= 0
+                            sendText(a, getUser(scope.peer.id).name().toString()+ "ازمون خود را به پایان رساند"+"نمره")
+                            goto("/start")
+                        }
 
 
 
-             validate {
-                 if (text.equals("انصراف") || text.equals("تمام") ) {
-                     sendText("متشکر از جواب شما")
-                     return@validate true
-                 }
-                 else {
-                     sendText("لطفا یکی از گزینه های بالا را انتخاب کنید")
-                     return@validate false
-                 }
 
-             }
-         }
+                    }
+                }
 
+            }
+            validate {
+                if (text.equals("3") || text.equals("2") || text.equals("1") || text.equals("۳") || text.equals("۱") || text.equals("۲") || text.equals("/خروج")) {
+                    sendText(Constant.thanks)
+                    return@validate true
+                }
+                else {
+                    sendText(Constant.invalidInput)
+                    return@validate false
+                }
+
+            }
+        }
+
+        command("/کارنامه") {
+
+            before {
+                user_series = DBUtils.getInstance().getAllUserSeries(userId)
+                if(user_series != null && (user_series as List<UsersAnswers>).size !=0) {
+                    sendText(Constant.selectWorkbook)
+                    for (item in user_series) {
+                        sendText(item.date.toString())
+
+                    }
+                }
+                if (current_qu < que_size ) {
+                    sendText(questions!!.get(current_qu).question.text)
+
+                    for (item in questions!!.get(current_qu).optionses) {
+                        questions!!.get(current_qu).optionses.indexOf(item)+1
+                        sendText("["+item.text+"]"+"(send:"+(questions!!.get(current_qu).optionses.indexOf(item)+1).toString()+")")
+
+
+                    }
+
+                    goto("ask_text")
+
+                }
+
+
+            }
+        }
     }
 
 

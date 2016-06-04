@@ -1,7 +1,6 @@
 
 package ir.elenoon.db;
 
-import akka.http.javadsl.model.DateTime;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
@@ -12,7 +11,7 @@ import java.util.Date;
  */
 @Entity
 @Table(name = "users_answers", schema = "competition", catalog = "")
-public class Users_answers {
+public class UsersAnswers {
 
     private int users_answer_id;
     private Date date;
@@ -22,7 +21,7 @@ public class Users_answers {
     private Options options;
     private Series series;
 
-    public Users_answers(Date date, Contacts contacts, Questions questions, Options options, Series series) {
+    public UsersAnswers(Date date, Contacts contacts, Questions questions, Options options, Series series) {
         this.date = date;
         this.contacts = contacts;
         this.questions = questions;

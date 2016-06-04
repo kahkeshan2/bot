@@ -1,0 +1,6 @@
+local.properties
+*.iml
+.idea
+actor-bots-example/build
+actor-bots/build
+.gradle

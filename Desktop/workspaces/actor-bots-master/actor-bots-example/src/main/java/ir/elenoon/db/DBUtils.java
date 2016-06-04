@@ -1,38 +1,59 @@
 package ir.elenoon.db;
 
-import com.mysql.cj.core.conf.PropertyDefinitions;
+import ir.elenoon.models.UserWorkbookModel;
+import ir.elenoon.utils.Utils;
+import ir.elenoon.models.QuestionsModel;
 import org.hibernate.*;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.hibernate.Criteria;
-import org.hibernate.Query;
-import org.hibernate.criterion.Restrictions;
 
 
 /**
  * Created by mohammad on 5/26/16.
  */
 public class DBUtils {
-    private static SessionFactory factory;
+
+    private final static String tag = "DBUtils";
+
+    public static void main(String[] args) {
+
+        for (int i = 0; i < 5; i++) {
+//            Utils.log(tag,"Size is: " +DBUtils.getInstance().insertOrUpdateUserAnswer());
+        }
+
+//        List<UserWorkbookModel> userWorkbookModels = DBUtils.getInstance().getUserSerieWorkbook(2, 13);
+//        for (UserWorkbookModel model :
+//                userWorkbookModels) {
+//            Utils.log(tag, "User option is: " + model.getUserSelectedOption() + " True option is: " + model.getTrueOption());
+//        }
+
+    }
+
+
+    private static SessionFactory factory = null;
+
+    private static DBUtils instance;
 
     public static DBUtils getInstance() {
+
         try {
-            factory = new Configuration().configure().buildSessionFactory();
+            if (factory == null)
+                factory = new Configuration().configure().buildSessionFactory();
         } catch (HibernateException ex) {
-            System.err.println("Failed to create sessionFactory object.");
+            Utils.log(tag, "Failed to create sessionFactory object");
             ex.printStackTrace();
             throw new ExceptionInInitializerError(ex);
         }
-        DBUtils ME = new DBUtils();
-        //Integer empID1 = ME.addEmployee("masood", "09153523084", "ahmad");
-        //Integer empID2 = ME.addEmployee("Daisy", "Das", 5000);
-        //Integer empID3 = ME.addEmployee("John", "Paul", 10000);
-        return ME;
+        if (instance == null)
+            instance = new DBUtils();
+
+        return instance;
     }
 
     public Integer addEmployee(String username, String standard_phone, String name) {
@@ -179,12 +200,14 @@ public class DBUtils {
         try {
             tx = session.beginTransaction();
 
-            Series series = new Series(5, new Date(), new Date(), new Date());
+            Date date = new Date();
+            date.setDate(7);
+            Series series = new Series(5, date, new Date(), new Date());
             Questions question = new Questions("Question 5", new Date(), series);
-            Options option1 = new Options("Option1", new Date(), false, question);
-            Options option2 = new Options("Option2", new Date(), false, question);
-            Options option3 = new Options("Option3", new Date(), true, question);
-            Options option4 = new Options("Option4", new Date(), false, question);
+            Options option1 = new Options("Option1", new Date(), false, question, series);
+            Options option2 = new Options("Option2", new Date(), false, question, series);
+            Options option3 = new Options("Option3", new Date(), true, question, series);
+            Options option4 = new Options("Option4", new Date(), false, question, series);
 
 
             optionID = (Integer) session.save(option1);
@@ -207,31 +230,300 @@ public class DBUtils {
     }
 
 
-    public Integer addUserAnswer() {
-        Session session = factory.openSession();
+//    public Integer addUserAnswer() {
+//        Session session = factory.openSession();
+//        Transaction tx = null;
+//        Integer employeeID = null;
+//        try {
+//            tx = session.beginTransaction();
+//            Contacts contacts = new Contacts("mojahed", "6161616161", "mohammad");
+//
+//            Series series = new Series(5, new Date(), new Date(), new Date());
+//            Questions question = new Questions("Question 5", new Date(), series);
+//
+//            Options option1 = new Options("Option1", new Date(), false, question);
+//            Options option2 = new Options("Option2", new Date(), false, question);
+//            Options option3 = new Options("Option3", new Date(), true, question);
+//            Options option4 = new Options("Option4", new Date(), false, question);
+//
+//            UsersAnswers users_answers = new UsersAnswers(new Date(), contacts, question, option1, series);
+//
+//            employeeID = (Integer) session.save(users_answers);
+////            session.save(option2);
+////            session.save(option3);
+////            session.save(option4);
+//            tx.commit();
+//
+//
+//        } catch (HibernateException e) {
+//            if (tx != null) tx.rollback();
+//            e.printStackTrace();
+//        } finally {
+//            session.close();
+//        }
+//
+//        System.out.println("ID For Insert--------------: " + employeeID);
+//        return employeeID;
+//    }
+
+    public int insertUserIfNotExist(String phoneNumber) {
+
+
+        //get standard phone number
+        phoneNumber = Utils.getStandardPhoneNumber(phoneNumber);
+
         Transaction tx = null;
-        Integer employeeID = null;
+        Integer contactID = null;
+        Session session = factory.openSession();
         try {
             tx = session.beginTransaction();
-            Contacts contacts = new Contacts("mojahed","6161616161","mohammad");
 
-            Series series = new Series(5, new Date(), new Date(), new Date());
-            Questions question = new Questions("Question 5", new Date(), series);
 
-            Options option1 = new Options("Option1", new Date(), false, question);
-            Options option2 = new Options("Option2", new Date(), false, question);
-            Options option3 = new Options("Option3", new Date(), true, question);
-            Options option4 = new Options("Option4", new Date(), false, question);
+            Criteria criteria = session.createCriteria(Contacts.class);
+            criteria.add(Restrictions.in("standard_phone", phoneNumber));
 
-           Users_answers users_answers = new Users_answers(new Date(),contacts,question,option1,series);
+            Contacts contact = (Contacts) criteria.uniqueResult();
 
-            employeeID = (Integer) session.save(users_answers);
-//            session.save(option2);
-//            session.save(option3);
-//            session.save(option4);
+            if (contact == null) {
+                contactID = insertContact(phoneNumber);
+            } else {
+                contactID = contact.getId();
+            }
+
+            tx.commit();
+        } catch (HibernateException e) {
+            if (tx != null) tx.rollback();
+            Utils.log(tag, e.getMessage());
+        } finally {
+            session.close();
+        }
+
+        return contactID;
+    }
+
+    private int insertContact(String standardPhoneNumber) {
+
+        Transaction tx = null;
+        Integer contactID = null;
+        Session session = factory.openSession();
+
+        try {
+            tx = session.beginTransaction();
+
+            //TODO get contact name and username from nasim in kotlin class
+            Contacts contact = new Contacts(null, standardPhoneNumber, null);
+            contactID = (Integer) session.save(contact);
             tx.commit();
 
+            Utils.log(tag, "Contact inserted successfully. ID is: " + contactID);
+        } catch (HibernateException e) {
+            if (tx != null)
+                tx.rollback();
+            Utils.log(tag, e.getMessage());
+        } finally {
+            session.close();
+        }
 
+        return contactID;
+    }
+
+
+    private List<Questions> getQuestionList(int seriesid) {
+        Transaction tx = null;
+        List<Questions> questionList = null;
+        Session session = factory.openSession();
+
+        try {
+            tx = session.beginTransaction();
+
+            Criteria criteria = session.createCriteria(Questions.class);
+            criteria.add(Restrictions.eq("series.series_id", seriesid));
+
+            questionList = (List<Questions>) criteria.list();
+            tx.commit();
+
+        } catch (HibernateException e) {
+            if (tx != null) tx.rollback();
+            Utils.log(tag, e.getMessage());
+        } finally {
+            session.close();
+        }
+        return questionList;
+    }
+
+    private List<Options> getOptionList(int seriesID) {
+        Transaction tx = null;
+        List<Options> optionList = null;
+        Session session = factory.openSession();
+        try {
+            tx = session.beginTransaction();
+
+            Criteria criteria = session.createCriteria(Options.class);
+            criteria.add(Restrictions.eq("series.series_id", seriesID));
+
+            optionList = (List<Options>) criteria.list();
+            tx.commit();
+
+        } catch (HibernateException e) {
+            if (tx != null) tx.rollback();
+            Utils.log(tag, e.getMessage());
+        } finally {
+            session.close();
+        }
+        return optionList;
+    }
+
+
+    private Series series = null;
+    private List<QuestionsModel> questionsModels = null;
+
+    /**
+     * return last exam as a list of QuestionsModel
+     * this method checks series list is null or not and also compare current time
+     * by exam start time  and expire time to cache data
+     *
+     * @return
+     */
+    public List<QuestionsModel> getQuestionsModels() {
+
+        Date currentDate = new Date();
+        if (series == null || currentDate.after(series.getExpire_time()) || currentDate.before(series.getStart_time())) {
+            series = new Series();
+            questionsModels = new ArrayList<>();
+
+            Transaction tx = null;
+            Session session = factory.openSession();
+            try {
+                tx = session.beginTransaction();
+
+                Criteria criteria = session.createCriteria(Series.class);
+
+                criteria.add(Restrictions.lt("start_time", currentDate));
+                criteria.add(Restrictions.gt("expire_time", currentDate));
+
+                List<Series> seriesList = (List<Series>) criteria.list();
+
+                if (seriesList != null && seriesList.size() != 0) {
+                    series = seriesList.get(seriesList.size() - 1);
+                    questionsModels = getQuestionByOptions(series);
+                }
+                tx.commit();
+            } catch (HibernateException e) {
+                if (tx != null) tx.rollback();
+                Utils.log(tag, e.getMessage());
+            } finally {
+                session.close();
+            }
+            return questionsModels;
+        } else {
+            return questionsModels;
+        }
+    }
+
+    /**
+     * collect all questions and options of one exam into on list (questionsModels)
+     *
+     * @param series
+     * @return
+     */
+    private List<QuestionsModel> getQuestionByOptions(Series series) {
+
+        List<QuestionsModel> questionsModels = new ArrayList<>();
+        List<Questions> questionList = getQuestionList(series.getSeries_id());
+        List<Options> optionsList = getOptionList(series.getSeries_id());
+
+        try {
+            if (questionList != null && optionsList != null) {
+                for (Questions question : questionList) {
+                    List<Options> questionOptions = optionsList.stream().filter(option -> option.getQuestions().getQuestions_id() == question.getQuestions_id()).collect(Collectors.toList());
+                    QuestionsModel model = new QuestionsModel(series, question, questionOptions);
+                    questionsModels.add(model);
+                }
+            }
+        } catch (Exception e) {
+            Utils.log(tag, e.getMessage());
+        }
+
+        return questionsModels;
+    }
+
+    /**
+     * get series by series id to obtain full series object
+     * maybe call in kotlin
+     *
+     * @param seriesID
+     * @return
+     */
+    public Series getSeries(int seriesID) {
+
+        if (series == null || series.getSeries_id() != seriesID) {
+            Transaction tx = null;
+            Session session = factory.openSession();
+            List<Series> seriesList;
+            try {
+                tx = session.beginTransaction();
+
+                Criteria criteria = session.createCriteria(Series.class);
+                criteria.add(Restrictions.eq("series_id", seriesID));
+
+                seriesList = (List<Series>) criteria.list();
+                tx.commit();
+
+                if (seriesList != null && seriesList.size() != 0) {
+                    series = seriesList.get(seriesList.size() - 1);
+                }
+
+            } catch (HibernateException e) {
+                if (tx != null) tx.rollback();
+                Utils.log(tag, e.getMessage());
+            } finally {
+                session.close();
+            }
+        }
+        return series;
+    }
+
+    /**
+     * insert or update (if exist in table) user answer
+     * call in kotlin class
+     *
+     * @param userId
+     * @param series
+     * @param question
+     * @param option
+     * @return
+     */
+    //TODO test this method
+    public int insertOrUpdateUserAnswer(int userId, Series series, Questions question, Options option) {
+
+
+        Session session = factory.openSession();
+        Transaction tx = null;
+        Integer uaID = null;
+        try {
+            tx = session.beginTransaction();
+
+            Criteria criteria = session.createCriteria(UsersAnswers.class);
+            criteria.add(Restrictions.eq("contacts.id", userId));
+            criteria.add(Restrictions.eq("options.option_id", option.getOption_id()));
+            UsersAnswers userOption = (UsersAnswers) criteria.uniqueResult();
+
+            if (userOption == null) {
+                Contacts contacts = session.load(Contacts.class, userId);
+                userOption = new UsersAnswers(new Date(), contacts, question, option, series);
+
+                uaID = (Integer) session.save(userOption);
+                Utils.log(tag, "User answer inserted successfully by ID: " + uaID);
+            } else {
+                userOption.setOptions(option);
+                userOption.setDate(new Date());
+
+                session.update(userOption);
+                uaID = userOption.getUsers_answer_id();
+                Utils.log(tag, "User answer updated successfully by ID: " + uaID);
+            }
+
+            tx.commit();
         } catch (HibernateException e) {
             if (tx != null) tx.rollback();
             e.printStackTrace();
@@ -239,7 +531,138 @@ public class DBUtils {
             session.close();
         }
 
-        System.out.println("ID For Insert--------------: " + employeeID);
-        return employeeID;
+
+        return uaID;
     }
+
+    /**
+     * call from kotlin to get all user exams
+     *
+     * @param userID
+     * @return
+     */
+    public List<UsersAnswers> getAllUserSeries(int userID) {
+
+        Transaction tx = null;
+        Session session = factory.openSession();
+        List<UsersAnswers> usersAnswers = null;
+
+        try {
+            tx = session.beginTransaction();
+
+            Criteria criteria = session.createCriteria(UsersAnswers.class);
+            criteria.add(Restrictions.eq("contacts.id", userID));
+            criteria.setProjection(Projections.distinct(Projections.property("series.series_id")));
+
+            usersAnswers = (List<UsersAnswers>) criteria.list();
+            tx.commit();
+
+        } catch (HibernateException e) {
+            if (tx != null) tx.rollback();
+            Utils.log(tag, e.getMessage());
+        } finally {
+            session.close();
+        }
+        return usersAnswers;
+    }
+
+    /**
+     * get workbook of user for an exam by series id as object
+     *
+     * @param userID
+     * @param seriesID
+     * @return
+     */
+    private List<UserWorkbookModel> getUserSeriesWorkbook(int userID, int seriesID) {
+
+        List<UsersAnswers> userAnswers = getAllUserSeriesAnswers(userID, seriesID);
+        List<Options> optionsList = getOptionList(seriesID);
+
+        List<UserWorkbookModel> userWorkbookModels = new ArrayList<>();
+
+        for (Options option : optionsList) {
+            userWorkbookModels.addAll(userAnswers.stream().filter(userAnswer -> option.getOption_id() == userAnswer.getOptions().getOption_id()).map(userAnswer -> new UserWorkbookModel(getUserOptionByOptionID(option.getOption_id(), optionsList).getText(), option.getText())).collect(Collectors.toList()));
+        }
+
+        return userWorkbookModels;
+    }
+
+    /**
+     * get all user answers for an special exam by series id
+     *
+     * @param userID
+     * @param seriesID
+     * @return
+     */
+    private List<UsersAnswers> getAllUserSeriesAnswers(int userID, int seriesID) {
+
+        Transaction tx = null;
+        Session session = factory.openSession();
+        List<UsersAnswers> usersAnswers = null;
+
+        try {
+            tx = session.beginTransaction();
+
+            Criteria criteria = session.createCriteria(UsersAnswers.class);
+            criteria.add(Restrictions.eq("contacts.id", userID));
+            criteria.add(Restrictions.eq("series.series_id", seriesID));
+
+            usersAnswers = (List<UsersAnswers>) criteria.list();
+
+            tx.commit();
+
+        } catch (HibernateException e) {
+            if (tx != null) tx.rollback();
+            Utils.log(tag, e.getMessage());
+        } finally {
+            session.close();
+        }
+        return usersAnswers;
+    }
+
+    /**
+     * get user option object by option id
+     *
+     * @param userOptionID
+     * @param optionsList
+     * @return
+     */
+    private Options getUserOptionByOptionID(int userOptionID, List<Options> optionsList) {
+        for (Options option : optionsList) {
+            if (userOptionID == option.getOption_id()) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * return user workbook for an special exam as string
+     * call in kotlin class
+     *
+     * @param userID
+     * @param seriesID
+     * @param sendTrueOption send true option if needed
+     * @return
+     */
+    //TODO test this method
+    public String getUserSerieWorkbookOrAnswerAsString(int userID, int seriesID, boolean sendTrueOption) {
+
+        List<UserWorkbookModel> models = getUserSeriesWorkbook(userID, seriesID);
+        StringBuilder stringBuilder = new StringBuilder();
+
+        if (models != null) {
+            for (int i = 0; i < models.size(); i++) {
+                UserWorkbookModel model = models.get(i);
+
+                stringBuilder.append("Question " + i + 1 + ": ");
+                stringBuilder.append("Your option is: " + model.getUserSelectedOption());
+                if (sendTrueOption)
+                    stringBuilder.append("and correct option is: " + model.getTrueOption());
+                stringBuilder.append(System.getProperty("line.separator"));
+            }
+        }
+        return stringBuilder.toString();
+    }
+
 }

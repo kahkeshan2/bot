@@ -1,7 +1,6 @@
 
 package ir.elenoon.db;
 
-import akka.http.javadsl.model.DateTime;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
